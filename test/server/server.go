@@ -28,7 +28,6 @@ type server struct {
 	waitGroup *sync.WaitGroup    //等待所有的goroutines退出
 	context   context.Context    //用于通知所有子goroutines cancel
 	cancel    context.CancelFunc //用于通知所有子goroutines cancel
-	resultCh  chan interface{}   //用于从readLoop的结果发送到writeLoop
 }
 
 func NewServer() Server {
@@ -40,7 +39,6 @@ func NewServer() Server {
 		waitGroup: &sync.WaitGroup{},
 		context:   ctx,
 		cancel:    cancel,
-		resultCh:  make(chan interface{}, 2), //容量为2,第一个[]byte, 第二个bool
 	}
 }
 
@@ -62,11 +60,11 @@ func (srv *server) readLoop(se session.Session, resultCh chan<- interface{}, don
 		}
 		//从socket读取
 		st, err := se.Read()
-		if err == io.ErrUnexpectedEOF {
+		if err == io.ErrUnexpectedEOF || err == io.EOF {
 			log.Println("connection has been closed by peer")
 			break
 		} else if err != nil {
-			log.Println(err)
+			log.Println("read error:", err)
 			break
 		}
 		//分析socket读出来数据,返回一个Result结构体
@@ -74,8 +72,8 @@ func (srv *server) readLoop(se session.Session, resultCh chan<- interface{}, don
 		//执行命令
 		data, optype := common.ExecuteCmd(result, srv.confLock)
 		//通过channel发送结果给writeLoop()
-		srv.resultCh <- data
-		srv.resultCh <- optype
+		resultCh <- data
+		resultCh <- optype
 
 	}
 
@@ -100,7 +98,10 @@ func (srv *server) writeLoop(se session.Session, resultCh <-chan interface{}, do
 
 		}
 		for i := 0; i < 2; i++ {
-			elem := <-srv.resultCh
+			elem, isClosed := <-resultCh
+			if !isClosed {
+				return
+			}
 			switch elem.(type) {
 			case []byte:
 				data, ok := interface{}(elem).([]byte)
@@ -125,11 +126,11 @@ func (srv *server) writeLoop(se session.Session, resultCh <-chan interface{}, do
 
 		//发送从channel中读取的数据,发送到socket
 		_, err := se.Write(f)
-		if err == io.EOF {
+		if err == io.EOF || err == io.ErrClosedPipe {
 			log.Println("connection has been closed by peer")
 			break
 		} else if err != nil {
-			log.Println(err)
+			log.Println("write error:", err)
 			break
 		}
 
@@ -151,6 +152,7 @@ func (srv *server) newConn(conn net.Conn) {
 		se.Close()
 		srv.waitGroup.Done()
 	}()
+	//用于从readLoop的结果发送到writeLoop
 	resultCh := make(chan interface{}, 2)
 	go srv.readLoop(se, resultCh, done)
 	go srv.writeLoop(se, resultCh, done)

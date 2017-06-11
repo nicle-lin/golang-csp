@@ -131,7 +131,7 @@ func start() {
 			st.ReadUint16()
 			optype, _ := st.ReadByte()
 			op := frame.OpType(optype)
-			PrintResult(op, st.Data())
+			PrintResult(op, st.DataSelect(st.Pos(), st.Size()))
 
 		}
 		done <- struct{}{}

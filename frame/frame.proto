@@ -1,0 +1,16 @@
+syntax = "proto2";
+package frame;
+
+message Request{
+    optional int32 id = 1;    //以id来标识具体是要查询,删除,增加哪一个Persion
+    optional string message = 2;
+}
+
+message Person
+{
+    required int32 id = 1 [default = 0];   //操作类型为增加时,从客户端带过来的id不用管
+    required string name = 2 [default = "doesn't exist"];
+    required int32 age = 3 [default = 0];
+    required string city =4 [default = "doesn't exist"];
+
+}

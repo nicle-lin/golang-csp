@@ -39,9 +39,10 @@ func RandomNumber(number int32) int32 {
 }
 
 func RandomString(length int) string {
-	str := "abcdefghijklmnopqrstuvwxyz"
-	bytes := []byte(str)
-	result := []byte{}
+	bytes := []byte{'a','b','c','d','e','f','g','h','i',
+					'j','k','l','m','n','o','p','q','r',
+					's','t','u','v','w','x','y','z'}
+	var result []byte
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
 	for i := 0; i < length; i++ {
 		result = append(result, bytes[r.Intn(len(bytes))])

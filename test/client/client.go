@@ -15,7 +15,7 @@ import (
 
 var conf = "../../conf/conf.ini"
 var network, address string = "tcp", "127.0.0.1:8989"
-var optypes = []frame.OpType{
+var opTypes = []frame.OpType{
 	frame.GET,
 	frame.ADD,
 	frame.DELETE,
@@ -50,8 +50,8 @@ func RandomString(length int) string {
 	return string(result)
 }
 
-func write(optype frame.OpType, data []byte, se session.Session) {
-	f := frame.NewFrame(data, optype)
+func write(opType frame.OpType, data []byte, se session.Session) {
+	f := frame.NewFrame(data, opType)
 	_, err := se.Write(f)
 	if err != nil {
 		log.Println("wirte error:", err)
@@ -103,7 +103,7 @@ func start() {
 
 	//Write
 	go func() {
-		for _, op := range optypes {
+		for _, op := range opTypes {
 			switch op {
 			case frame.ADD:
 				write(op, dataAdd, se)
@@ -143,7 +143,7 @@ func start() {
 }
 
 func PrintResult(op frame.OpType, data []byte) {
-	var operate string = ""
+	var operate = ""
 
 	switch { //此处 switch op{}是不正确的,因为判断应交给下面的case语句
 	case (op & frame.ADD) == frame.ADD:

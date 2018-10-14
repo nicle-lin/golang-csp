@@ -1,6 +1,7 @@
 package session
 
 import (
+	"errors"
 	"github.com/nicle-lin/golang-csp/frame"
 	"github.com/nicle-lin/golang-csp/stream"
 	"io"
@@ -29,12 +30,17 @@ func NewSession(conn net.Conn) Session {
 func (s *session) Read() (st stream.Stream, err error) {
 	//分配frame头部长度的大小的空间
 	frameHeader := make([]byte, frame.FrameHeaderLen)
-	if _, err = io.ReadFull(s.conn, frameHeader); err != nil {
+	n, err := io.ReadFull(s.conn, frameHeader)
+	if err != nil {
+		return
+	}
+	if n != frame.FrameHeaderLen{
+		err = errors.New("not enough data to read")
 		return
 	}
 	var dataLength uint16
 	//校验收到的头部是否正确
-	dataLength, err = frame.ParseFrame(frameHeader)
+	dataLength, err = frame.ParseHeaderFrame(frameHeader)
 	if err != nil {
 		return
 	}

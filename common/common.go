@@ -11,7 +11,7 @@ import (
 	"sync"
 )
 
-var conf string = "../../conf/conf.ini"
+var conf = "../../conf/conf.ini"
 
 type Result struct {
 	person  frame.Person //执行失败就为空,当optype为ADD时,解析结果存在此
@@ -20,7 +20,6 @@ type Result struct {
 }
 
 func ParseProtobuf(optype frame.OpType, data []byte) (newFrame Result, err error) {
-	newFrame = Result{}
 	if optype == frame.ADD {
 		err = proto.Unmarshal(data, &newFrame.person)
 	} else if optype == frame.GET || optype == frame.DELETE {
@@ -35,15 +34,14 @@ func ParseProtobuf(optype frame.OpType, data []byte) (newFrame Result, err error
 }
 
 func ParseCmd(st stream.Stream) Result {
-	_, _ = st.ReadUint16()
-	_, _ = st.ReadUint16()
+	st.ReadUint16()
+	st.ReadUint16()
 	op, _ := st.ReadByte()
 	newFrame, err := ParseProtobuf(frame.OpType(op), st.DataSelect(st.Pos(), st.Size()))
 	if err != nil {
 		log.Printf("Parse Request fail:%s\n", err)
 		return Result{}
 	}
-
 	return newFrame
 }
 
@@ -156,7 +154,7 @@ func getResultFromConf(result Result, confLock *sync.RWMutex) Result {
 	}
 	section := "Person" + strconv.Itoa(int(result.request.GetId()))
 	if _, err := cfg.GetSection(section); err != nil {
-		var person frame.Person = frame.Person{
+		 person  := frame.Person{
 			Id:   proto.Int32(0),
 			Name: proto.String("doesn't exist"),
 			Age:  proto.Int32(0),
@@ -170,7 +168,7 @@ func getResultFromConf(result Result, confLock *sync.RWMutex) Result {
 
 	id, _ := strconv.Atoi(cfg.Section(section).Key("Id").String())
 	age, _ := strconv.Atoi(cfg.Section(section).Key("Age").String())
-	var person frame.Person = frame.Person{
+	person := frame.Person{
 		Id:   proto.Int32(int32(id)),
 		Name: proto.String(cfg.Section(section).Key("Name").String()),
 		Age:  proto.Int32(int32(age)),

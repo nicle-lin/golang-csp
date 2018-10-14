@@ -2,7 +2,7 @@ syntax = "proto2";
 package frame;
 
 message Request{
-    optional int32 id = 1;    //以id来标识具体是要查询,删除,增加哪一个Persion
+    optional int32 id = 1;    //以id来标识具体是要查询,删除,增加哪一个Person
     optional string message = 2;
 }
 

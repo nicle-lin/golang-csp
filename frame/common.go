@@ -32,7 +32,7 @@ type Frame interface {
 	//根据操作类型返回可用于发送的[]byte类型的数据
 	BuildFrame() (frame []byte, err error)
 	SetFrameData(data []byte)
-	SetFrameOpType(optype OpType)
+	SetFrameOpType(opType OpType)
 }
 
 type frame struct {
@@ -40,10 +40,10 @@ type frame struct {
 	optype OpType
 }
 
-func NewFrame(data []byte, optype OpType) Frame {
+func NewFrame(data []byte, opType OpType) Frame {
 	return &frame{
 		data:   data,
-		optype: optype,
+		optype: opType,
 	}
 }
 
@@ -60,9 +60,7 @@ func (f *frame) SetFrameOpType(optype OpType) {
  *      前两2个是协议开头标志　　后面2个是标识数据(data)长度　接着的1个是操作类型　　data为真实数据
  */
 func (f *frame) BuildFrame() (frame []byte, err error) {
-	//
 	buf := make([]byte, FrameHeaderLen+len(f.data))
-
 	st := stream.NewLEStream(buf)
 	err = st.WriteUint16(FrameFlag)
 	checkError(err)
@@ -78,7 +76,7 @@ func (f *frame) BuildFrame() (frame []byte, err error) {
 
 //解析协议头部是否合法,如果合法返回接下来要接收的数据长度,不合法就返回0
 //传入参数必须是头部5个字节的长度
-func ParseFrame(frameHeader []byte) (length uint16, err error) {
+func ParseHeaderFrame(frameHeader []byte) (length uint16, err error) {
 	if len(frameHeader) != FrameHeaderLen {
 		err = errors.New("frameHeader isn't equal FrameHeaderLen(5)")
 		return

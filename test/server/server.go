@@ -13,6 +13,7 @@ import (
 	"os/signal"
 	"sync"
 	"syscall"
+	"time"
 )
 
 type Server interface {
@@ -51,6 +52,7 @@ func (srv *server) readLoop(se session.Session, resultCh chan<- interface{}, don
 		done <- struct{}{}
 		srv.waitGroup.Done()
 	}()
+	//只要客户端不关闭连接就会一直等待数据,当然也可以设置服务端超时机制,主动关闭连接
 	for {
 		select {
 		case <-srv.context.Done():
@@ -143,7 +145,7 @@ func (srv *server) newConn(conn net.Conn) {
 	srv.waitGroup.Add(1)
 
 	//如果3秒都没有读到或写完说明网络太差了
-	//conn.SetReadDeadline(time.Now().Add(time.Second * 3))
+	conn.SetReadDeadline(time.Now().Add(time.Second * 3))
 	se := session.NewSession(conn)
 
 	done := make(chan struct{}, 2)
@@ -158,7 +160,7 @@ func (srv *server) newConn(conn net.Conn) {
 	go srv.writeLoop(se, resultCh, done)
 	<-done
 	<-done
-	log.Println("close connection....")
+	log.Println("closed connection.........done")
 	return
 
 }
@@ -191,6 +193,7 @@ func (srv *server) Start() {
 		}
 		//新的连接到来开始处理
 		log.Printf("a new connection coming(%s)....", conn.RemoteAddr())
+		//每来一个新的连接就启用一个新的goroutine处理
 		go srv.newConn(conn)
 	}
 
@@ -200,9 +203,10 @@ func (srv *server) Start() {
 func (srv *server) Stop() {
 	close(srv.exitCh)
 	srv.waitGroup.Wait() //等待所有goroutines优雅退出
+	log.Println("--------------the program has been exited")
 }
 
-var network, address string = "tcp", "127.0.0.1:8989"
+var network, address  = "tcp", "127.0.0.1:8989"
 
 func init() {
 	//一开始就读文件,没有回锁也不会有竞争,因为压根没人来竞争
@@ -218,15 +222,13 @@ func init() {
 }
 
 func main() {
-
 	srv := NewServer()
 	go srv.Start()
 
 	SigRecv := make(chan os.Signal, 1)
-	//catch ctr+c signal
+	//catch ct+c signal
 	signal.Notify(SigRecv, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
 	sig := <-SigRecv
 	log.Printf("catch signal(%s) to exit\n", sig.String())
 	srv.Stop() //开始通知退出
-
 }
